@@ -1,0 +1,138 @@
+version: 2
+
+updates:
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+          time: '04:00'
+          timezone: Etc/UTC
+      target-branch: main
+      open-pull-requests-limit: 2
+      rebase-strategy: auto
+      commit-message:
+          prefix: 'ci(deps)'
+      groups:
+          actions:
+              patterns:
+                  - '*'
+      cooldown:
+          default-days: 7
+
+    - package-ecosystem: npm
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+          time: '04:15'
+          timezone: Etc/UTC
+      target-branch: main
+      open-pull-requests-limit: 4
+      rebase-strategy: auto
+      versioning-strategy: increase-if-necessary
+      commit-message:
+          prefix: 'build(deps)'
+      groups:
+          npm-production:
+              dependency-type: production
+              update-types:
+                  - minor
+                  - patch
+          npm-development:
+              dependency-type: development
+              update-types:
+                  - minor
+                  - patch
+      ignore:
+          # These pre-1.0 libraries use minor releases for breaking API changes.
+          # Rockdactyl upgrades them with the matching Pterodactyl migration
+          # instead of accepting an unsafe grouped Dependabot update.
+          - dependency-name: '@floating-ui/react-dom-interactions'
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: swr
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: xterm-addon-fit
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: xterm-addon-search
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: xterm-addon-web-links
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: yup
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: '*'
+            update-types:
+                - version-update:semver-major
+      cooldown:
+          default-days: 7
+
+    - package-ecosystem: composer
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+          time: '04:30'
+          timezone: Etc/UTC
+      target-branch: main
+      open-pull-requests-limit: 4
+      rebase-strategy: auto
+      versioning-strategy: increase-if-necessary
+      commit-message:
+          prefix: 'build(deps)'
+      groups:
+          composer-production:
+              dependency-type: production
+              update-types:
+                  - minor
+                  - patch
+          composer-development:
+              dependency-type: development
+              update-types:
+                  - minor
+                  - patch
+      ignore:
+          # Newer minor releases change the enforced formatting rules across
+          # upstream Pterodactyl. Keep receiving fixes on the 3.64 line until
+          # a deliberate formatter migration is scheduled.
+          - dependency-name: friendsofphp/php-cs-fixer
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: '*'
+            update-types:
+                - version-update:semver-major
+      cooldown:
+          default-days: 7
+
+    - package-ecosystem: docker
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+          time: '04:45'
+          timezone: Etc/UTC
+      target-branch: main
+      open-pull-requests-limit: 2
+      rebase-strategy: auto
+      commit-message:
+          prefix: 'build(deps)'
+      groups:
+          container-base-images:
+              patterns:
+                  - '*'
+      ignore:
+          # Pterodactyl v1.15.1 targets PHP 8.3 and the compatibility matrix
+          # covers PHP 8.2/8.3. Digest refreshes remain enabled on this line.
+          - dependency-name: php
+            update-types:
+                - version-update:semver-minor
+          - dependency-name: '*'
+            update-types:
+                - version-update:semver-major
+      cooldown:
+          default-days: 7

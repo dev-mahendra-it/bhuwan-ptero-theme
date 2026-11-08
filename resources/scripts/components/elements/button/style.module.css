@@ -1,0 +1,101 @@
+.button {
+    @apply px-4 py-2 inline-flex items-center justify-center;
+    @apply relative overflow-hidden rounded text-base font-semibold transition-all duration-100;
+    @apply focus:ring-[3px] focus:ring-offset-2 focus:ring-offset-gray-700 focus:ring-opacity-50;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    box-shadow: none;
+    transform: none;
+
+    &:hover:not(:disabled) {
+        box-shadow: none;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+        &:hover:not(:disabled) {
+            transform: none;
+        }
+    }
+
+    /* Sizing Controls */
+    &.small {
+        @apply px-4 py-0 h-8 font-normal text-sm focus:ring-2;
+    }
+
+    &.large {
+        @apply px-5 py-3;
+    }
+
+    &.secondary {
+        @apply text-gray-50 bg-transparent;
+
+        &:disabled {
+            background: transparent !important;
+        }
+    }
+
+    &:disabled {
+        @apply cursor-not-allowed;
+    }
+
+    &.square {
+        @apply p-0 w-12 h-12 flex-none;
+        aspect-ratio: 1 / 1;
+
+        &.small {
+            @apply w-8 h-8;
+        }
+    }
+}
+
+.primary {
+    color: #fff;
+    background-color: rgb(var(--rock-primary-700));
+    background-image: none;
+    --tw-ring-color: rgba(var(--shell-accent-rgb), 0.72);
+
+    &:hover:not(:disabled),
+    &:active:not(:disabled) {
+        background-color: rgb(var(--rock-primary-800));
+    }
+
+    &.secondary {
+        &:hover:not(:disabled),
+        &:active:not(:disabled) {
+            background-color: rgb(var(--rock-primary-700));
+        }
+    }
+
+    &:disabled {
+        color: rgba(255, 255, 255, 0.68);
+        background-color: rgba(var(--shell-accent-rgb), 0.58);
+    }
+}
+
+.text {
+    @apply bg-gray-500 text-gray-50;
+    background-image: none;
+    @apply hover:bg-gray-400 active:bg-gray-400 focus:ring-gray-300 focus:ring-opacity-50;
+
+    &.secondary {
+        @apply hover:bg-gray-500 active:bg-gray-500;
+    }
+
+    &:disabled {
+        @apply bg-gray-500/75 text-gray-200/75;
+    }
+}
+
+.danger {
+    @apply bg-red-600 text-gray-50;
+    background-image: none;
+    @apply hover:bg-red-500 active:bg-red-500 focus:ring-red-400 focus:ring-opacity-75;
+
+    &.secondary {
+        @apply hover:bg-red-600 active:bg-red-600;
+    }
+
+    &:disabled {
+        @apply bg-red-600/75 text-red-50/75;
+    }
+}

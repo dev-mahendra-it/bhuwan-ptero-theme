@@ -1,0 +1,56 @@
+{
+    "name": "BHUWAN UI",
+    "short_name": "BHUWAN",
+    "theme_color": "#090712",
+    "background_color": "#090712",
+    "display": "standalone",
+    "icons": [
+        {
+            "src": "/favicons/bhuwan-mark.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/favicons/android-icon-36x36.png?v=bhuwan-ui-2",
+            "sizes": "36x36",
+            "type": "image/png",
+            "density": "0.75"
+        },
+        {
+            "src": "/favicons/android-icon-48x48.png?v=bhuwan-ui-2",
+            "sizes": "48x48",
+            "type": "image/png",
+            "density": "1.0"
+        },
+        {
+            "src": "/favicons/android-icon-72x72.png?v=bhuwan-ui-2",
+            "sizes": "72x72",
+            "type": "image/png",
+            "density": "1.5"
+        },
+        {
+            "src": "/favicons/android-icon-96x96.png?v=bhuwan-ui-2",
+            "sizes": "96x96",
+            "type": "image/png",
+            "density": "2.0"
+        },
+        {
+            "src": "/favicons/android-icon-144x144.png?v=bhuwan-ui-2",
+            "sizes": "144x144",
+            "type": "image/png",
+            "density": "3.0"
+        },
+        {
+            "src": "/favicons/android-chrome-192x192.png?v=bhuwan-ui-2",
+            "sizes": "192x192",
+            "type": "image/png",
+            "density": "4.0"
+        },
+        {
+            "src": "/favicons/android-chrome-512x512.png?v=bhuwan-ui-2",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

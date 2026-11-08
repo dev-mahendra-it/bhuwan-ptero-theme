@@ -1,0 +1,107 @@
+name: Frontend
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: frontend-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build:
+        name: Typecheck, lint, and build
+        runs-on: ubuntu-24.04
+        timeout-minutes: 35
+        env:
+            CI: true
+        steps:
+            - name: Check out source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Validate installer scripts
+              run: |
+                  bash -n install.sh release.sh scripts/package-release.sh scripts/verify-release-assets.sh tests/ReleaseToolingSmokeTest.sh
+                  bash install.sh --help | grep -q 'Rockdactyl installer'
+                  bash tests/InstallerSmokeTest.sh
+
+            - name: Set up Node.js
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 22
+                  cache: yarn
+                  cache-dependency-path: yarn.lock
+
+            - name: Validate release tooling
+              run: bash tests/ReleaseToolingSmokeTest.sh
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile --non-interactive
+
+            - name: Validate release metadata
+              run: yarn metadata:check
+
+            - name: Typecheck
+              run: yarn tsc
+
+            - name: Typecheck responsive QA
+              run: yarn test:responsive:typecheck
+
+            - name: Lint
+              run: yarn lint
+
+            - name: Run frontend tests
+              run: yarn test --ci --runInBand
+
+            - name: Build production assets
+              run: yarn build:production
+
+    documentation-site:
+        name: Documentation site
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
+        env:
+            CI: true
+        defaults:
+            run:
+                working-directory: website
+        steps:
+            - name: Check out source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Set up Node.js
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 22
+                  cache: npm
+                  cache-dependency-path: website/package-lock.json
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Audit dependencies
+              run: npm audit --audit-level=high
+
+            - name: Typecheck
+              run: npm run typecheck
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Check formatting
+              run: npm run format:check
+
+            - name: Build site
+              run: npm run build

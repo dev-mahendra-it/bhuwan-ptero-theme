@@ -1,0 +1,248 @@
+name: Release
+
+on:
+    push:
+        tags:
+            - 'v*'
+
+permissions: {}
+
+concurrency:
+    group: rock-theme-release-${{ github.ref_name }}
+    cancel-in-progress: false
+
+jobs:
+    frontend:
+        name: Frontend
+        if: github.actor != 'github-actions[bot]'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 40
+        permissions:
+            contents: read
+        env:
+            CI: true
+        steps:
+            - name: Check out source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Set up Node.js
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 22
+                  package-manager-cache: false
+
+            - name: Validate release version
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  package_tag="v$(node -p "require('./package.json').version")"
+                  if [ "$GITHUB_REF_NAME" != "$package_tag" ]; then
+                      echo "Tag $GITHUB_REF_NAME does not match package version $package_tag." >&2
+                      exit 1
+                  fi
+
+            - name: Validate release metadata
+              run: yarn metadata:check
+
+            - name: Validate installer scripts
+              run: |
+                  bash -n install.sh release.sh scripts/package-release.sh scripts/verify-release-assets.sh tests/ReleaseToolingSmokeTest.sh
+                  bash tests/InstallerSmokeTest.sh
+                  bash tests/ReleaseToolingSmokeTest.sh
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile --non-interactive
+
+            - name: Typecheck
+              run: yarn tsc
+
+            - name: Typecheck responsive QA
+              run: yarn test:responsive:typecheck
+
+            - name: Lint
+              run: yarn lint
+
+            - name: Run frontend tests
+              run: yarn test --ci --runInBand
+
+            - name: Verify reproducible production assets
+              run: bash scripts/verify-release-assets.sh
+
+            - name: Save compiled assets
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: release-assets-${{ github.sha }}
+                  path: public/assets
+                  if-no-files-found: error
+                  retention-days: 2
+
+    backend:
+        name: PHP ${{ matrix.php }} / ${{ matrix.database.name }}
+        if: github.actor != 'github-actions[bot]'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 40
+        permissions:
+            contents: read
+        env:
+            COMPOSER_NO_INTERACTION: '1'
+            COMPOSER_PROCESS_TIMEOUT: '0'
+        strategy:
+            fail-fast: false
+            matrix:
+                php:
+                    - '8.2'
+                    - '8.3'
+                database:
+                    - name: mariadb:10
+                      image: mariadb:10@sha256:ce66c7be32a03aabe7241d0a10993a2db827ef652a35d25727d92a832ac8ef73
+                    - name: mariadb:11
+                      image: mariadb:11@sha256:2439dcd7d14010ecd1ff7a4e1c5abe8e208c34fe35290744deeeaac3569043c3
+                    - name: mysql:8
+                      image: mysql:8@sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb
+                    - name: mysql:9
+                      image: mysql:9@sha256:257388edf9c84dbc04c763625446d5f3fa6ed60d1b0873bc552c614ba0a7ab4e
+        services:
+            database:
+                image: ${{ matrix.database.image }}
+                env:
+                    MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+                    MYSQL_DATABASE: testing
+                options: >-
+                    --health-cmd "if command -v mariadb-admin >/dev/null 2>&1; then mariadb-admin ping --host=127.0.0.1 --user=root --silent; else mysqladmin ping --host=127.0.0.1 --user=root --silent; fi"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 10
+                    --health-start-period 20s
+                ports:
+                    - 3306/tcp
+        steps:
+            - name: Check out source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+              with:
+                  php-version: ${{ matrix.php }}
+                  extensions: bcmath, cli, curl, gd, mbstring, mysql, openssl, pdo, tokenizer, xml, zip
+                  tools: composer:v2
+                  coverage: none
+
+            - name: Configure test environment
+              run: cp .env.ci .env
+
+            - name: Validate Composer metadata
+              run: composer validate --strict --no-check-publish
+
+            - name: Install dependencies
+              run: composer install --no-progress --prefer-dist
+
+            - name: Check PHP formatting
+              run: vendor/bin/php-cs-fixer fix --dry-run --diff
+
+            - name: Run unit tests
+              run: vendor/bin/phpunit --bootstrap vendor/autoload.php tests/Unit
+              env:
+                  DB_HOST: UNIT_NO_DB
+
+            - name: Run integration tests
+              run: vendor/bin/phpunit tests/Integration
+              env:
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: ${{ job.services.database.ports['3306'] }}
+                  DB_USERNAME: root
+
+    container:
+        name: Container (amd64/arm64)
+        if: github.actor != 'github-actions[bot]'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 90
+        permissions:
+            contents: read
+        steps:
+            - name: Check out source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+            - name: Build candidate image
+              uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  push: false
+                  platforms: linux/amd64,linux/arm64
+                  cache-from: type=gha
+
+    release:
+        name: Build release archive
+        needs: [frontend, backend, container]
+        if: github.actor != 'github-actions[bot]'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
+        permissions:
+            contents: write # Required to create or update the GitHub release.
+        steps:
+            - name: Check out source
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Restore compiled assets
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  name: release-assets-${{ github.sha }}
+                  path: public/assets
+
+            - name: Create release archive
+              run: bash scripts/package-release.sh panel.tar.gz
+
+            - name: Create release checksum
+              run: sha256sum panel.tar.gz > panel.tar.gz.sha256
+
+            - name: Verify release archive provenance
+              run: |
+                  set -euo pipefail
+                  sha256sum --check panel.tar.gz.sha256
+                  provenance="$(tar -xOf panel.tar.gz ./.rock/release.json)"
+                  printf '%s' "$provenance" | jq -e \
+                      --arg theme_version "${GITHUB_REF_NAME#v}" \
+                      --arg pterodactyl_version "$(tr -d '[:space:]' < .rock/upstream-version)" \
+                      --arg source_commit "$(git rev-parse HEAD)" '
+                          .schema == 1 and
+                          .theme_version == $theme_version and
+                          .pterodactyl_version == $pterodactyl_version and
+                          .source_commit == $source_commit
+                      ' >/dev/null
+                  archive_sha="$(cut -d ' ' -f 1 panel.tar.gz.sha256)"
+                  archive_bytes="$(stat -c '%s' panel.tar.gz)"
+                  {
+                      echo "### Reproducible release artifact"
+                      echo "- Theme: \`${GITHUB_REF_NAME}\`"
+                      echo "- Pterodactyl: \`$(tr -d '[:space:]' < .rock/upstream-version)\`"
+                      echo "- Source: \`$(git rev-parse HEAD)\`"
+                      echo "- SHA-256: \`${archive_sha}\`"
+                      echo "- Size: \`${archive_bytes}\` bytes"
+                      echo "- Assets: two clean production builds matched"
+                      echo "- Determinism: two independent archive passes matched"
+                  } >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Create draft GitHub release
+              uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+              with:
+                  name: Rockdactyl ${{ github.ref_name }}
+                  draft: true
+                  prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+                  generate_release_notes: true
+                  files: |
+                      panel.tar.gz
+                      panel.tar.gz.sha256

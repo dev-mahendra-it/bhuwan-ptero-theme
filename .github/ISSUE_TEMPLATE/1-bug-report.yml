@@ -1,0 +1,112 @@
+name: Bug report
+description: Report a reproducible Rockdactyl defect or regression.
+title: '[Bug]: '
+labels:
+    - bug
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thank you for reporting a Rockdactyl issue. For Pterodactyl core, Wings, node, or game-server support, use the upstream Pterodactyl support channels.
+
+    - type: input
+      id: theme-version
+      attributes:
+          label: Rockdactyl version
+          description: Use the installed release tag or full commit identifier.
+          placeholder: v3.0.0
+      validations:
+          required: true
+
+    - type: input
+      id: panel-version
+      attributes:
+          label: Pterodactyl Panel version
+          placeholder: 1.15.1
+      validations:
+          required: true
+
+    - type: dropdown
+      id: installation-method
+      attributes:
+          label: Installation method
+          options:
+              - Rockdactyl installer
+              - Manual release archive
+              - Container image
+              - Development checkout
+              - Other
+      validations:
+          required: true
+
+    - type: input
+      id: browser-device
+      attributes:
+          label: Browser and device
+          description: Enter N/A when the problem only affects the installer or updater.
+          placeholder: Chrome 128 on Android 15, Firefox 130 on Windows 11, or N/A
+      validations:
+          required: true
+
+    - type: dropdown
+      id: view
+      attributes:
+          label: Affected view
+          options:
+              - Client dashboard
+              - Server management
+              - Login or account
+              - Admin panel
+              - Public status page
+              - Installer or updater
+              - Other
+      validations:
+          required: true
+
+    - type: textarea
+      id: current-behavior
+      attributes:
+          label: Current behavior
+          description: Explain what is wrong and include screenshots when the issue is visual.
+      validations:
+          required: true
+
+    - type: textarea
+      id: expected-behavior
+      attributes:
+          label: Expected behavior
+      validations:
+          required: true
+
+    - type: textarea
+      id: reproduction
+      attributes:
+          label: Steps to reproduce
+          description: Include the route, viewport size, account role, and the smallest reliable reproduction.
+          placeholder: |
+              1. Open …
+              2. Select …
+              3. Observe …
+      validations:
+          required: true
+
+    - type: textarea
+      id: logs
+      attributes:
+          label: Relevant logs
+          description: Remove credentials, API keys, tokens, server addresses, and personal data.
+          render: shell
+
+    - type: checkboxes
+      id: checks
+      attributes:
+          label: Pre-submission checks
+          options:
+              - label: I searched existing Rockdactyl issues.
+                required: true
+              - label: I reproduced this on the latest supported Rockdactyl release.
+                required: true
+              - label: This report concerns Rockdactyl rather than an upstream Pterodactyl or Wings problem.
+                required: true
+              - label: I removed credentials, tokens, IP addresses, and personal data from this report.
+                required: true

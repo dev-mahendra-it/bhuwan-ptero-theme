@@ -1,0 +1,116 @@
+import React, { useState } from 'react';
+import { Dialog as HDialog } from '@headlessui/react';
+import { Button } from '@/components/elements/button/index';
+import { XIcon } from '@heroicons/react/solid';
+import { AnimatePresence, motion } from 'framer-motion';
+import { DialogContext, IconPosition, RenderDialogProps, styles } from './';
+import useReducedMotion from '@/plugins/useReducedMotion';
+
+const variants = {
+    open: {
+        y: 0,
+        opacity: 1,
+        transition: {
+            type: 'tween',
+            ease: 'easeOut',
+            duration: 0.15,
+        },
+    },
+    closed: {
+        y: 6,
+        opacity: 0,
+        transition: {
+            type: 'tween',
+            ease: 'easeIn',
+            duration: 0.15,
+        },
+    },
+};
+
+export default ({
+    open,
+    title,
+    description,
+    onClose,
+    hideCloseIcon,
+    preventExternalClose,
+    children,
+}: RenderDialogProps) => {
+    const [icon, setIcon] = useState<React.ReactNode>();
+    const [footer, setFooter] = useState<React.ReactNode>();
+    const [iconPosition, setIconPosition] = useState<IconPosition>('title');
+    const reducedMotion = useReducedMotion();
+
+    const onDialogClose = (): void => {
+        if (!preventExternalClose) {
+            return onClose();
+        }
+    };
+
+    return (
+        <AnimatePresence>
+            {open && (
+                <DialogContext.Provider value={{ setIcon, setFooter, setIconPosition }}>
+                    <HDialog
+                        static
+                        as={motion.div}
+                        initial={reducedMotion ? false : { opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={reducedMotion ? undefined : { opacity: 0 }}
+                        transition={{ duration: reducedMotion ? 0 : 0.15 }}
+                        open={open}
+                        onClose={onDialogClose}
+                    >
+                        <div className={'fixed inset-0 bg-gray-900/50'} style={{ zIndex: 900 }} />
+                        <div className={'fixed inset-0 overflow-y-auto'} style={{ zIndex: 910 }}>
+                            <div className={styles.container}>
+                                <HDialog.Panel
+                                    as={motion.div}
+                                    initial={reducedMotion ? false : 'closed'}
+                                    animate={reducedMotion ? undefined : 'open'}
+                                    exit={reducedMotion ? undefined : 'closed'}
+                                    variants={reducedMotion ? undefined : variants}
+                                    className={styles.panel}
+                                >
+                                    <div className={'flex flex-1 min-h-0 p-6 pb-0 overflow-y-auto'}>
+                                        {iconPosition === 'container' && icon}
+                                        <div className={'flex-1 min-w-0'}>
+                                            <div className={'flex items-center'}>
+                                                {iconPosition !== 'container' && icon}
+                                                <div>
+                                                    {title && (
+                                                        <HDialog.Title className={styles.title}>{title}</HDialog.Title>
+                                                    )}
+                                                    {description && (
+                                                        <HDialog.Description>{description}</HDialog.Description>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {children}
+                                            <div className={'invisible h-6'} />
+                                        </div>
+                                    </div>
+                                    {footer}
+                                    {/* Keep this below the other buttons so that it isn't the default focus if they're present. */}
+                                    {!hideCloseIcon && (
+                                        <div className={'absolute right-0 top-0 m-4'}>
+                                            <Button.Text
+                                                size={Button.Sizes.Small}
+                                                shape={Button.Shapes.IconSquare}
+                                                onClick={onClose}
+                                                className={'group min-w-[2.75rem] min-h-[2.75rem]'}
+                                                aria-label={'Close dialog'}
+                                            >
+                                                <XIcon className={styles.close_icon} aria-hidden={'true'} />
+                                            </Button.Text>
+                                        </div>
+                                    )}
+                                </HDialog.Panel>
+                            </div>
+                        </div>
+                    </HDialog>
+                </DialogContext.Provider>
+            )}
+        </AnimatePresence>
+    );
+};
